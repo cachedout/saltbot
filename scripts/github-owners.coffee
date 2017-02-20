@@ -9,39 +9,54 @@
 #   Thanks also to the hubot-github-repo-event-notifier for inspiration and a framework
 #   to create this.
 
+inspect = (require('util')).inspect
+
 module.exports = (robot) ->
-    robot.router.post '/hubot/github-owners/', (req, res) ->
-        
-        robot.logger.debug "github-owners: Received POST to /hubot/github-owners/ with data = #{inspect req.body}"
-        eventType = req.headers["x-github-event"]
-        robot.logger.debug "github-owners: Processing event type: \"#{eventType}\"..."
+    robot.router.post "/hubot/github-owners", (req, res) ->
+      robot.logger.debug "github-owners: Received POST to /hubot/github-owners/ with data = #{inspect req.body}"
+      eventType = req.headers["x-github-event"]
+      robot.logger.debug "github-owners: Processing event type: \"#{eventType}\"..."
+
+      data = req.body
+
+      if eventType is "pull_request"
+        robot.logger.debug "Proper event type of pull_request"
+      else
+        console.log "Incorrect GitHub event received!"
+        # TODO proper exit?
+      robot.logger.debug "github-owners: Processing owner:  #{data.orgnization}"
+      robot.logger.debug "github-owners: Processing repo:  #{data.repo.name}"
+      robot.logger.debug "github-owners: Processing PR number:  #{data.number}"
+
+
+      res.end ""
+
 
         # OK, we have the data, let's start working!
        
-        try
-            # Verify that this is a PR event. If not, log and skip.
-            
-            # Get the commit hash(s)
-            
-            # For each commit hash, build a list of files.
+    # Verify that this is a PR event. If not, log and skip.
+    
+    # Get the commit hash(s)
+    
+    # For each commit hash, build a list of files.
 
-            # Discard files we have already seen.
+    # Discard files we have already seen.
 
-            # Add file(s) to list of files modified by this PR
-            
-            # Break apart files and directories.
+    # Add file(s) to list of files modified by this PR
+    
+    # Break apart files and directories.
 
-            # Create unique set of directories.
+    # Create unique set of directories.
 
-            # For each directory, check for an OWNERS file.
+    # For each directory, check for an OWNERS file.
 
-            # Download the OWNERS file and evaluate it
+    # Download the OWNERS file and evaluate it
 
-            # Add OWNERS to list to notify.
-            
-            # Construct post.
+    # Add OWNERS to list to notify.
+    
+    # Construct post.
 
-            # Post it back to the PR.
-        catch err
-            console.log "Github owners event notifier error: #{error}."
+    # Post it back to the PR.
+    #
+
 
