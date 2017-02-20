@@ -24,8 +24,10 @@ module.exports = (robot) ->
       else
         console.log "Incorrect GitHub event received!"
         # TODO proper exit?
-      robot.logger.debug "github-owners: Processing owner:  #{data.orgnization}"
-      robot.logger.debug "github-owners: Processing repo:  #{data.repo.name}"
+      robot.logger.debug "github-owners: Processing hash URL: #{data.pull_request.commits_url}"
+      robot.logger.debug "github-owners: Number of files PR reported changed:  #{data.pull_request.changed_files}"
+      robot.logger.debug "github-owners: Number of commits in PR reported:  #{data.pull_request.commits}"
+      robot.logger.debug "github-owners: Processing repo:  #{data.repository.full_name}"
       robot.logger.debug "github-owners: Processing PR number:  #{data.number}"
 
 
