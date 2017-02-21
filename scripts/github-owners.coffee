@@ -13,28 +13,8 @@ inspect = (require('util')).inspect
 
 found_files = []
 
-module.exports = (robot) ->
-    robot.router.post "/hubot/github-owners", (req, res) ->
-      robot.logger.debug "github-owners: Received POST to /hubot/github-owners/ with data = #{inspect req.body}"
-      eventType = req.headers["x-github-event"]
-      robot.logger.debug "github-owners: Processing event type: \"#{eventType}\"..."
 
-      data = req.body
-
-      if eventType is "pull_request"
-        robot.logger.debug "Proper event type of pull_request"
-      else
-        console.log "Incorrect GitHub event received!"
-        # TODO proper exit?
-      robot.logger.debug "github-owners: Processing hash URL: #{data.pull_request.commits_url}"
-      robot.logger.debug "github-owners: Number of files PR reported changed:  #{data.pull_request.changed_files}"
-      robot.logger.debug "github-owners: Number of commits in PR reported:  #{data.pull_request.commits}"
-      robot.logger.debug "github-owners: Processing repo:  #{data.repository.full_name}"
-      robot.logger.debug "github-owners: Processing PR number:  #{data.number}"
-
-      res.end ""
-
-
+handle_post = (robot, data) ->
       # Time to get some details about the commits
       robot.http(data.pull_request.commits_url).header('Accept', 'application/json').get() (err, res, body) ->
         # TODO error-check
@@ -65,6 +45,32 @@ module.exports = (robot) ->
                 
               
             
+
+# Main POST
+module.exports = (robot) ->
+    robot.router.post "/hubot/github-owners", (req, res) ->
+      #robot.logger.debug "github-owners: Received POST to /hubot/github-owners/ with data = #{inspect req.body}"
+      eventType = req.headers["x-github-event"]
+      robot.logger.debug "github-owners: Processing event type: \"#{eventType}\"..."
+
+      data = req.body
+
+      if eventType is "pull_request"
+        robot.logger.debug "Proper event type of pull_request"
+      else
+        console.log "Incorrect GitHub event received!"
+        # TODO proper exit?
+      robot.logger.debug "github-owners: Processing hash URL: #{data.pull_request.commits_url}"
+      robot.logger.debug "github-owners: Number of files PR reported changed:  #{data.pull_request.changed_files}"
+      robot.logger.debug "github-owners: Number of commits in PR reported:  #{data.pull_request.commits}"
+      robot.logger.debug "github-owners: Processing repo:  #{data.repository.full_name}"
+      robot.logger.debug "github-owners: Processing PR number:  #{data.number}"
+
+      handle_post(robot, data)
+
+      res.end ""
+
+
 
 
 
