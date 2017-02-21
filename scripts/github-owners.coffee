@@ -11,6 +11,8 @@
 
 inspect = (require('util')).inspect
 
+found_files = []
+
 module.exports = (robot) ->
     robot.router.post "/hubot/github-owners", (req, res) ->
       robot.logger.debug "github-owners: Received POST to /hubot/github-owners/ with data = #{inspect req.body}"
@@ -30,8 +32,40 @@ module.exports = (robot) ->
       robot.logger.debug "github-owners: Processing repo:  #{data.repository.full_name}"
       robot.logger.debug "github-owners: Processing PR number:  #{data.number}"
 
-
       res.end ""
+
+
+      # Time to get some details about the commits
+      robot.http(data.pull_request.commits_url).header('Accept', 'application/json').get() (err, res, body) ->
+        # TODO error-check
+        data = JSON.parse body
+        robot.logger.debug("github-owners: Found commits data bundle: #{data}")
+        for commit in data
+          do (commit) ->
+            robot.logger.debug("github-owners: Commit sha: #{commit.sha}")
+            robot.logger.debug("github-owners: Fetching commit details for SHA #{commit.commit.url}")
+            
+            # Get the individual commit page
+            robot.http(commit.url).header('Accept', 'application/json').get() (err, res, body) ->
+              data = JSON.parse body
+              for modified_file in data.files
+                do (modified_file) ->
+                  robot.logger.debug("github-owners: Located modified file: #{modified_file.filename}")
+                  if modified_file.filename not in found_files
+                    found_files.push modified_file.filename
+              robot.logger.debug("github-owners: List query complete!")
+              robot.logger.debug("github-owners: Files list: #{found_files}")
+              search_dirs = []
+        # OK, we have a list of files! Now, for each file find the directory
+        robot.logger.debug("OK, time to look at some files")
+        for found_file in found_files
+         do (found_file) ->
+           [search_dir, _] = found_files.split "/"
+           robot.logger.debug("github-owners: search-dir #{search_dir}")
+                
+              
+            
+
 
 
         # OK, we have the data, let's start working!
