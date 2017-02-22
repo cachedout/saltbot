@@ -10,41 +10,58 @@
 #   to create this.
 
 inspect = (require('util')).inspect
+Q = require('q')
 
-found_files = []
+
+fetch_commit = (robot, commit) ->
+  robot.logger.debug("github-owners: Commit sha: #{commit.sha}")
+  robot.logger.debug("github-owners: Fetching commit details for SHA #{commit.commit.url}")
+  q = Q.defer()
+
+  robot.http(commit.url).header('Accept', 'application/json').get() (err, res, body) ->
+    data = JSON.parse body
+    q.resolve data.files
+
+  return q.promise
+  
+
+find_owners = (robot, src_files) ->
+  # Take an array of files and return a list of owners
+  # TODO refactor for file->owner dict
+  robot.logger.debug("github-owners: Searching for owners with src files: #{inspect src_files}")
+  Q.allSettled(get_owner_file(robot, src_file.raw_url) for src_file in src_files).then(contents) ->
+    console.log('Ready to resolve')
 
 
-handle_post = (robot, data) ->
-      # Time to get some details about the commits
+
+  
+
+get_owner_file = (robot, src_file) ->
+  # Return an owner file if it exists
+  file_split = src_file.split "/"
+  file_split_dir = file_split.end(0, -1)
+  owners_dir = file_split_dir.join "/"
+  owners_file = owners_dir + '/OWNERS'
+  robot.logger.debug("github-owners: Found owners dir: #{owners_dir}")
+
+  # Attempt to retreive it
+  q = Q.defer()
+  robot.http(owners_file).header().get() (err, res, body) ->
+    q.resolve body
+  return q
+  
+
+  
+
+route_post = (robot, data) ->
+      # Handles data received from a GH hook event
       robot.http(data.pull_request.commits_url).header('Accept', 'application/json').get() (err, res, body) ->
         # TODO error-check
         data = JSON.parse body
-        robot.logger.debug("github-owners: Found commits data bundle: #{data}")
-        for commit in data
-          do (commit) ->
-            robot.logger.debug("github-owners: Commit sha: #{commit.sha}")
-            robot.logger.debug("github-owners: Fetching commit details for SHA #{commit.commit.url}")
-            
-            # Get the individual commit page
-            robot.http(commit.url).header('Accept', 'application/json').get() (err, res, body) ->
-              data = JSON.parse body
-              for modified_file in data.files
-                do (modified_file) ->
-                  robot.logger.debug("github-owners: Located modified file: #{modified_file.filename}")
-                  if modified_file.filename not in found_files
-                    found_files.push modified_file.filename
-              robot.logger.debug("github-owners: List query complete!")
-              robot.logger.debug("github-owners: Files list: #{found_files}")
-              search_dirs = []
-        # OK, we have a list of files! Now, for each file find the directory
-        robot.logger.debug("OK, time to look at some files")
-        for found_file in found_files
-         do (found_file) ->
-           [search_dir, _] = found_files.split "/"
-           robot.logger.debug("github-owners: search-dir #{search_dir}")
-                
-              
-            
+        robot.logger.debug("github-owners: Found commits data bundle: #{inspect data}")
+
+        Q.allSettled(fetch_commit(robot, commit) for commit in data).then((contents) -> find_owners(robot, src_file.value for src_file in contents))
+        
 
 # Main POST
 module.exports = (robot) ->
@@ -65,8 +82,8 @@ module.exports = (robot) ->
       robot.logger.debug "github-owners: Number of commits in PR reported:  #{data.pull_request.commits}"
       robot.logger.debug "github-owners: Processing repo:  #{data.repository.full_name}"
       robot.logger.debug "github-owners: Processing PR number:  #{data.number}"
-
-      handle_post(robot, data)
+      
+      route_post(robot, data)
 
       res.end ""
 
